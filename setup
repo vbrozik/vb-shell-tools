@@ -2,6 +2,9 @@
 
 # Install the tools
 
+# TODO
+# - install functions - probably to ~/.bash_aliases
+
 src_bin_dir=scripts
 
 # Read CLI arguments using getopts
