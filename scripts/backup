@@ -1,0 +1,93 @@
+#!/bin/sh
+
+# Simple backup of preconfigured directories and files to tar archive.
+# Delete old backups and keep the number of last backups (3).
+
+# https://www.dokuwiki.org/faq:backup
+# https://www.dokuwiki.org/tips:backup_script
+
+# TODO:
+# - probably rewrite in Python
+# - use anacron to run automatically (Not installed in WSL2 Ubuntu 20.04)
+
+#region --- config ---
+backup_suffix=.tar.xz	# suffix for backup files, determines the compression
+keep_files=3			# how many newest backups to keep
+tar_opts=""				# default tar options separated by spaces
+
+if test "$1" = dokuwiki ; then
+	src_path="/var/www/html/dokuwiki"			# source root to backup
+	# for Debian etch: /var/lib/dokuwiki
+	tar_files="--anchored --exclude=data/cache --exclude=data/index \
+		--exclude=data/tmp conf/ data/"			# files to backup
+	dst_dir="dokuwiki-backup"					# relative backup destination
+	backup_prefix=dokuwiki-backup_
+elif test "$1" = ssh-customers ; then
+	src_path="$HOME/.ssh"
+	tar_files="--anchored config config.d/20_github.conf config_customers.d/ \
+		known_hosts"
+	tar_opts="-h"								# -h: dereference symlinks
+	dst_dir="customer-access"
+	backup_prefix=ssh-customers-backup_
+else
+	echo "Usage: $0 dokuwiki | ssh-customers"
+	exit 1
+fi
+backup_dst_path1="$HOME/backup/$dst_dir"		# directory to save backups
+backup_dst_path2="$HOME/backup-ntt/$dst_dir"	# second backup directory (cloud)
+
+# timestamp to be integrated into a filename (uses UTC)
+timestamp () {
+	date -u +%Y%m%dT%H%MZ		# compliant to ISO 8601
+	# NOTE about GNU date:
+	# date -u +%Y%m%dT%H%M%Z	# Shows the timezone as UTC.
+	# date TZ=Z +%Y%m%dT%H%M%Z	# Does not show the timezone at all!
+}
+#endregion
+
+#region --- create backup ---
+mkdir -vp "$backup_dst_path1"
+
+backup_file_name="${backup_dst_path1}/${backup_prefix}$(timestamp)${backup_suffix}"
+
+# shellcheck disable=SC2086		# $tar_files is a list of files
+tar -ca --checkpoint=250 -f "$backup_file_name" -C "$src_path" $tar_opts \
+	$tar_files &&
+	printf 'Created backup: %s\n' "$backup_file_name"
+# NOTE about GNU tar:
+# these options are GNU extensions: --exclude, ? -C -a
+# -C path sets the base path for --exclude and sources
+# --exclude directory/ does not exclude the directory itself
+#	The directory name must be specified without the trailing slash.
+
+echo Copying to the second location:
+mkdir -vp "$backup_dst_path2"
+cp -av "$backup_file_name" "$backup_dst_path2"
+#endregion
+
+#region --- remove old backups ---
+# TODO - unfinished:
+# check if last two backups are the same
+last_two_same () {
+	same_files="$(md5sum -b "${backup_prefix}"*"${backup_suffix}" |
+		sort -k2 | tail -n2 | awk '{print $1}' | uniq -c | awk '{print $1}')"
+	test "$same_files" = 2
+}
+
+# remove old backups while keeping $keep_files newest
+remove_backups_keep_newest () {
+	# FIXME shellcheck recommends to use find instead of ls
+	# shellcheck disable=SC2012
+	ls "${backup_prefix}"*"${backup_suffix}" |
+		head -n -"$keep_files" | xargs -d'\n' -r -- rm -v
+}
+
+echo Removing old backups:
+for backup_dst_path in "${backup_dst_path1}/" "${backup_dst_path2}/" ; do
+	if cd "$backup_dst_path" ; then
+		remove_backups_keep_newest
+	else
+		echo "Could not cd to $backup_dst_path. Not removing old backups."
+	fi
+done
+#endregion
