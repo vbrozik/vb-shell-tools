@@ -13,3 +13,7 @@ in specified directories. The tool keeps defined number of backups
 ### wsl-tools
 
 * `cdw` --- change directory to Windows path
+
+### python-tools
+
+* `debugpyw` --- run Python debugpy in wait mode (for debugging in VS Code)
