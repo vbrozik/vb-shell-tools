@@ -1,9 +1,13 @@
 #!/bin/sh
 
+# Requirements:
+# - debugpy --- Microsoft's Python debugger, pip install debugpy
+
 #region python-tools --- Tools for Python development
 
 debugpyw () {
         # Start debugpy in wait mode for VS Code remote debugging
+        # FIXME: Describe debug profile in VS Code creation
         _program="$1"
         shift
         if ! test -f "$_program" ; then

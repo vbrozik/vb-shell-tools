@@ -1,9 +1,13 @@
 #!/bin/sh
 
+# Requirements:
+# - wslpath --- installed in the default WSL Ubuntu 20.04
+
+
 #region wsl-tools --- Tools for WSL (Windows Subsystem for Linux)
 
 # TODO:
-# - pwdw --- print current directory in Windows path
+# - pwdw --- print current directory as Windows path
 
 cdw () {
         # cd to Windows directory
