@@ -5,11 +5,6 @@ Repository various simple shell tools for common use: backups etc.
 Install the tools by running `./setup.sh`. NOTE: Currently only scripts
 are installed.
 
-TODO add:
-
-- KeeAgent helper
-- ssh tools
-
 ## backup
 
 Create a backup of specified files and directories to tar archive
