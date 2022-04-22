@@ -17,3 +17,8 @@ in specified directories. The tool keeps defined number of backups
 ### python-tools
 
 * `debugpyw` --- run Python debugpy in wait mode (for debugging in VS Code)
+
+### various
+
+This section contains various tools. They are not included in the default
+installation.
