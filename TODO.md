@@ -4,6 +4,10 @@
 
 - KeeAgent helper
 - ssh tools
+- Python
+  - `venv-act` - activate venv in `.venv` by default
+  - `venv-dup` - duplicate venv
+  - `venv-init` - initialize venv `.venv` by default, update `pip` and `setuptools`, install `requirements.txt`
 
 ## Add functionality
 
