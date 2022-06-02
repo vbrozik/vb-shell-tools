@@ -6,6 +6,10 @@
 - ssh tools
 - keep first lines (for grep etc.)
   - <https://stackoverflow.com/questions/9969414/always-include-first-line-in-grep>
+- Python
+  - `venv-act` - activate venv in `.venv` by default
+  - `venv-dup` - duplicate venv
+  - `venv-init` - initialize venv `.venv` by default, update `pip` and `setuptools`, install `requirements.txt`
 
 ## Add functionality
 
