@@ -3,13 +3,29 @@
 # vb-shell-tools
 # Install the tools
 
-# TODO
-# - install functions - probably to ~/.bash_aliases
-
+# instalation source for scripts
 src_bin_dir=scripts
+# installation source for functions, aliases, vairables, etc.
 src_rc_dir=functions
+# destination for functions (WARNING: changing here is not enough!)
+rcdir="$HOME/.bashrc.d"
 
-# Read CLI arguments using getopts
+#region --- functions ---
+
+install_file () {
+    # $1: source file
+    # $2: destination directory
+    if test -n "$editable" ; then
+        ln -bv -s -r "$1" "$2"
+        # -r creates relative symlinks related to pwd, GNU extension
+    else
+        cp -bv "$1" "$2"
+    fi
+}
+
+#endregion
+
+#region --- Read CLI arguments using getopts
 
 while getopts "he" opt; do
     case $opt in
@@ -28,6 +44,10 @@ while getopts "he" opt; do
             ;;
     esac
 done
+
+#endregion
+
+#region --- Install scripts ---
 
 dst_bin_dir=""
 for bin_dir in "$HOME/.local/bin" "$HOME/bin" ; do
@@ -48,32 +68,20 @@ echo "Installing in $dst_bin_dir"
 mkdir -vp "$dst_bin_dir"
 
 for file in "$src_bin_dir"/* ; do
-    if test -f "$file" ; then
+    if test -r "$file" ; then
         chmod +x "$file"
-        if test -n "$editable" ; then
-            ln -bv -s -r "$file" "$dst_bin_dir"
-            # -r creates relative symlinks related to pwd, GNU extension
-        else
-            cp -bv "$file" "$dst_bin_dir"
-        fi
+        install_file "$file" "$dst_bin_dir"
     fi
 done
 
-# Functions and aliases
+#endregion
 
-rcdir="$HOME/.bashrc.d"
+#region --- Install functions and aliases ---
 
 mkdir -vp "$rcdir"
 
 for file in "$src_rc_dir"/* ; do
-    if test -r "$file" ; then
-        if test -n "$editable" ; then
-            ln -bv -s -r "$file" "$rcdir"
-            # -r creates relative symlinks related to pwd, GNU extension
-        else
-            cp -bv "$file" "$rcdir"
-        fi
-    fi
+    test -r "$file" && install_file "$file" "$rcdir"
 done
 
 rcfile="$HOME/.bashrc"
@@ -84,3 +92,5 @@ if ! grep -q '^# start ~/\.bashrc\.d reader' "$rcfile" ; then
         echo
     } >> "$rcfile"
 fi
+
+#endregion
