@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Requirements:
-# - wslpath --- installed in the default WSL Ubuntu 20.04
+# - wslpath --- installed in the default WSL Ubuntu 20.04 and newer
 
 
 #region wsl-tools --- Tools for WSL (Windows Subsystem for Linux)
