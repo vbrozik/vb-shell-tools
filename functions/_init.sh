@@ -20,9 +20,10 @@ test -d "$_this_dir" ||
 for _bashrc_d_file in  "${_this_dir}"/*.sh ; do
     test -r "$_bashrc_d_file" || continue
     # Skip filenames starting with '_'.
-    test "${_bashrc_d_file##_}" != "$_bashrc_d_file" && continue
+    _bashrc_d_file_base="$(basename "$_bashrc_d_file")"
+    test "${_bashrc_d_file_base##_}" != "$_bashrc_d_file_base" && continue
     # shellcheck source=/dev/null
     . "$_bashrc_d_file"
 done
 
-unset _this_dir _bashrc_d_file
+unset _this_dir _bashrc_d_file _bashrc_d_file_base
