@@ -23,6 +23,17 @@ install_file () {
     fi
 }
 
+errexit () {
+    # $1: error message
+    echo "$1" 1>&2
+    exit 1
+}
+
+escape_ere () {
+    # escape string in $1 for extended regex
+    printf %s\\n "$1" | sed -E 's/([[$.(+*{^\])/\\\1/g'
+}
+
 #endregion
 
 #region --- Read CLI arguments using getopts
@@ -57,6 +68,20 @@ for bin_dir in "$HOME/.local/bin" "$HOME/bin" ; do
             break
     esac
 done
+
+if test -z "$dst_bin_dir" ; then
+    for bin_dir in "\$HOME/.local/bin" "\$HOME/bin" ; do
+        if grep -Eq '^if +\[ +-d .*'"$(escape_ere "$bin_dir")" \
+                "$HOME/.profile" ; then
+            dst_bin_dir="$(eval printf %s "$bin_dir")"
+            echo "Creating directory: $dst_bin_dir"
+            mkdir -vp "$dst_bin_dir" || errexit "Cannot create $dst_bin_dir"
+            echo "Restart your shell to get it into your PATH" \
+                "or run 'source ~/.profile' to reload the new PATH."
+            break
+        fi
+    done
+fi
 
 if test -z "$dst_bin_dir" ; then
     echo "ERROR: No suitable destination bin directory in PATH found."
