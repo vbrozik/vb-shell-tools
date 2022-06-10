@@ -13,9 +13,15 @@
 - Shell tools
   - `promptanon` - anonymize prompt remove `\u@\h` and following `:`
   - `promptrestore`
+  - automatically number new venvs
 
 ## Add functionality
 
 - setup.sh
   - install functions and aliases
 - add bash completion
+
+## Inspiration
+
+- `.bashrc.d` - <https://github.com/detro/.bashrc.d>
+  - `/etc/profile.d/` exists: <https://unix.stackexchange.com/questions/493224/how-can-i-make-my-script-in-etc-profile-d-to-run-after-all-other-scripts-in-sam>
