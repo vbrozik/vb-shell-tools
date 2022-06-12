@@ -25,3 +25,9 @@
 
 - `.bashrc.d` - <https://github.com/detro/.bashrc.d>
   - `/etc/profile.d/` exists: <https://unix.stackexchange.com/questions/493224/how-can-i-make-my-script-in-etc-profile-d-to-run-after-all-other-scripts-in-sam>
+- `less` syntax highlighting and formatting
+  - default `-R` option ?
+  - YAML: `LESSOPEN="|yq -PC %s" less -R ...`
+  - <https://unix.stackexchange.com/questions/90990/less-command-and-syntax-highlighting>
+  - <https://unix.stackexchange.com/questions/191487/how-to-chain-multiple-lessopen-scripts>
+  - <https://unix.stackexchange.com/questions/267361/syntax-highlighting-in-the-terminal>
