@@ -9,6 +9,7 @@
 # TODO:
 # - probably rewrite in Python
 # - use anacron to run automatically (Not installed in WSL2 Ubuntu 20.04)
+# - implement backups from a docker container with DokuWiki
 
 #region --- config ---
 backup_suffix=.tar.xz	# suffix for backup files, determines the compression
