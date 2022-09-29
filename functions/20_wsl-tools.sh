@@ -1,8 +1,14 @@
 #!/bin/sh
 
 # Requirements:
+
 # - wslpath --- installed in the default WSL Ubuntu 20.04 and newer
 
+# - configure export of %USERPROFILE% Windows environment varible to
+#   $USERPROFILE - run this command in Windows for permanent setting:
+#   setx WSLENV "${env:WSLENV}:USERPROFILE/up"
+#   # does not work right: https://github.com/microsoft/terminal/issues/7130
+#   setx WSLENV USERPROFILE/up
 
 #region wsl-tools --- Tools for WSL (Windows Subsystem for Linux)
 
