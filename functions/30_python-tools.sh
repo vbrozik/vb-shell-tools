@@ -12,11 +12,13 @@ python_vergte() {
 
 debugpyw () {
         # Start debugpy in wait mode for VS Code remote debugging
-        # FIXME: Describe debug profile in VS Code creation
         _program="$1"
         shift
-        if ! test -f "$_program" ; then
-                _program="$(which "$_program")"
+        if ! test -f "$_program" && ! test "$_program" = -m ; then
+                if _program_path="$(which -- "$_program")" ; then
+                        _program="$_program_path"
+                        unset _program_path
+                fi
         fi
         python -m debugpy --listen 5678 --wait-for-client "$_program" "$@"
         unset _program
