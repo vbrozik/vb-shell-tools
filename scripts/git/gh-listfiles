@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# List files from GitHub repositories
+
+# API headers
+headers=(
+    -H "Accept: application/vnd.github+json"
+    -H "X-GitHub-Api-Version: 2022-11-28"
+)
+
+# list files from all my repositories
+
+for name_with_owner in $(gh repo list --json nameWithOwner --jq '.[].nameWithOwner') ; do
+    printf '### %s\n' "$name_with_owner"
+    gh api "${headers[@]}" "/repos/${name_with_owner}/git/trees/main?recursive=true" --jq '.tree[].path'
+    printf '\n'
+done
