@@ -6,6 +6,10 @@
 # https://docs.github.com/en/rest/guides/getting-started-with-the-rest-api
 # https://docs.github.com/en/rest/git/trees
 
+# The script can be made into a GitHub CLI extension:
+# https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions
+# https://cli.github.com/manual/gh_extension
+
 # GitHub API headers for `gh api`
 headers=(
     -H "Accept: application/vnd.github+json"
