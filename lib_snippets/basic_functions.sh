@@ -5,6 +5,27 @@
 # --- Dummy variable setting
 log_file=
 prog_name=
+dry_run=
+verbose=
+
+# --- Parse arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -n|--dry-run)
+            dry_run=1
+            shift
+            ;;
+        -v|--verbose)
+            verbose=1
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
 
 # Print error message and exit the program.
 errexit () {
