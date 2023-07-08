@@ -47,3 +47,15 @@ log_time () {
 log () {
     printf '%s %s: %s' "$(log_time)" "$prog_name" "$*"  >> "$log_file"
 }
+
+# Run the command dry if $dry_run is not empty.
+# Status code of the command is preserved.
+# In case of dry run, the status code is always 0.
+run_command () {
+    if test -z "$dry_run" ; then
+        test -n "$verbose" && log 'Running:' "$*"
+        "$@"
+    else
+        log 'Dry run:' "$*"
+    fi
+}
