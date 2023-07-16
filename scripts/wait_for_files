@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Wait for all given files to appear.
+
+# Applies eval to each argument repeatedly to expand possible wildcards
+# so that we do not need to provide exact file names.
+# Returns the list of expanded files after they appeared.
+
+# Arguments:
+#   list of files to wait for
+
+# Typical usage:
+#   less +F "$(wait_for_files file1*)"
+
+# Notes:
+# Wildcards can be passed as regular characters if they are escaped twice.
+# The following examples are equivalent and wait for file 'x*':
+# wait_for_file x\\\*
+# Other ways: 'x\*' "'x*'" "\"x*\""
+# The same applies to other special characters like whitespace:
+# wait_for_file x\\\ y
+
+# TODO:
+#   - Add optional timeout.
+#   - Take care of expansion to multiple files. ?
+
+# Expand the argument and test if the file exists.
+# Put the expanded file name to the variable expanded_file_name.
+expand_and_test () {
+    expanded_file_name="$(eval printf %s "$1")"
+    test -e "$expanded_file_name"
+}
+
+for file_name in "$@" ; do
+    while ! expand_and_test "$file_name" ; do
+        sleep 0.2
+    done
+    printf '%s\n' "$expanded_file_name"
+done
