@@ -3,9 +3,9 @@
 # vb-shell-tools
 # Install the tools
 
-# instalation source for scripts
+# installation source for scripts
 src_bin_dir=scripts
-# installation source for functions, aliases, vairables, etc.
+# installation source for functions, aliases, variables, etc.
 src_rc_dir=functions
 # destination for functions (WARNING: changing here is not enough!)
 rcdir="$HOME/.bashrc.d"
