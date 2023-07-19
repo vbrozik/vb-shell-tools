@@ -20,7 +20,7 @@ debugpyw () {
                         unset _program_path
                 fi
         fi
-        python -m debugpy --listen 5678 --wait-for-client "$_program" "$@"
+        python3 -m debugpy --listen 5678 --wait-for-client "$_program" "$@"
         unset _program
 }
 
