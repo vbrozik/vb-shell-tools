@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Start debugpy in wait mode for VS Code remote debugging
+# Allows to debug programs in $PATH.
+# Simplified version is in functions/30_python-tools.sh
+
+# Requirements:
+# - debugpy --- Microsoft's Python debugger: pip install debugpy
+# - in VS Code launch.json (debug launch profiles) a profile like this:
+: << +++COMMENT+++
+        {
+            "name": "debugpy 5678",
+            "type": "python",
+            "request": "attach",
+            "port": 5678
+        },
++++COMMENT+++
+
+
+# TODO: Process arguments properly.
+
+program="$1"
+shift
+
+if ! test -f "$program" && ! test "$program" = -m ; then
+    if program_path="$(which -- "$program")" ; then
+        program="$program_path"
+    fi
+fi
+
+exec python3 -m debugpy --listen 5678 --wait-for-client "$program" "$@"
