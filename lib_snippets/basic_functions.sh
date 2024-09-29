@@ -59,3 +59,24 @@ run_command () {
         log 'Dry run:' "$*"
     fi
 }
+
+# Wait for files to appear.
+# Extended version is in scripts/wait_for_files.
+# Applies eval to each argument repeatedly to expand possible wildcards.
+# Literal wildcards or whitespaces can be passed if they are escaped twice.
+# example for x*: wait_for_files x\\\*
+# Returns the list of files that appeared.
+# Arguments:
+#   list of files to wait for
+# Typical usage:
+#   less +F "$(wait_for_files file1*)"
+# TODO:
+#   - Add optional timeout.
+wait_for_files () {
+    for _file in "$@" ; do
+        while ! eval test -e "$_file" ; do
+            sleep 0.2
+        done
+        printf '%s\n' "$_file"
+    done
+}
