@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# This script creates a symbolic link.
+# If the symlink is on a Windows drive, it will be created as a Windows symlink.
+# Requires PowerShell 7.1 or later.
+# Windows require elevation to create symlinks so the script will ask for it.
+
+# Arguments:
+# $1: The target of the symlink.
+# $2: The name of the symlink.
+
+# TODO:
+# - Existing directory (like ln ../file1.txt .) as the "name" of the symlink is not supported.
+# - Option to replace an existing Linux symlink with a Windows symlink.
+# - Check what tar and zip does with Windows symlinks.
+# - Check if really whole developer mode is needed for creating symlinks without elevation.
+# - Check if we can do something with absolute paths on Windows.
+# - Get error messages and status code from pwsh.
+
+target="$1"
+link_name="$2"
+
+# Get file system type of the file.
+# $1: The file.
+fs_type () {
+    df -T "$1" | tail -n 1 | awk '{print $2}'
+    # Alternative: stat -f -c %T "$1"
+    # The alternative outputs different file system names.
+}
+
+# Create a Windows symlink.
+# $1: The target of the symlink.
+# $2: The name of the symlink.
+ln_windows () {
+    pwsh.exe -NonInteractive -Command - << +++EOF+++
+    \$target = '$1'
+    \$link_name = '$2'
+    \$command = "New-Item -ItemType SymbolicLink -Path '\$link_name' -Value '\$target'"
+    \$arguments = "-NoProfile -Command \`"\$command\`""
+    \$working_directory = (Get-Location).Path
+    Start-Process pwsh -ArgumentList \$arguments -Verb RunAs -WorkingDirectory \$working_directory
++++EOF+++
+    # Notes:
+    # - pwsh.exe -File - seems to echo the commands to the terminal.
+    # - Start-Process seems to require -WorkingDirectory otherwise it changes the directory.
+    # - To check the pwsh ouptut, add -NoExit to $arguments.
+}
+
+case "$(fs_type "$(dirname "$link_name" )" )" in
+    9p | v9fs)
+        ln_windows "$target" "$link_name"
+        ;;
+    *)
+        ln -s "$target" "$link_name"
+        ;;
+esac
