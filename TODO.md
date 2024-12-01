@@ -10,10 +10,11 @@
   - `venvact` - activate venv in `.venv` by default
   - `venvdup` - duplicate venv
   - `venvinit` - initialize venv `.venv` by default, update `pip` and `setuptools`, install `requirements.txt`
+  - automatically number new venvs
 - Shell tools
   - `promptanon` - anonymize prompt remove `\u@\h` and following `:`
   - `promptrestore`
-  - automatically number new venvs
+- escape shell code for example for `watch`
 
 ## Add functionality
 
