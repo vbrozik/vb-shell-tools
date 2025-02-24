@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# Link the file to the bin directory.
+
+if [ $# -ne 1 ]; then
+    echo "Usage: ln_bin <file_path>"
+    exit 1
+fi
+
+file_path=$1
+# Make the linked file executable if it is not already.
+# TODO: Add an option to make the linked file non-executable.
+make_executable=true
+
+escape_for_sed_ere() {
+    printf %s "$1" | sed 's/[[({*+?|\/.]/\\&/g'
+}
+
+# Find the first "bin" directory under $HOME in the path.
+bin_dir=$(
+    home_esc=$(escape_for_sed_ere "$HOME")
+    printf %s "$PATH" |
+        sed -En 's/(^|.*:)('"$home_esc"'\/[^:]*bin)(:.*|$)/\2/p'
+    )
+
+if [ -z "$bin_dir" ]; then
+    echo "No bin directory found in \$PATH under $HOME."
+    exit 1
+fi
+
+# Get file_path relative to $bin_dir.
+file_rel=$(realpath --relative-to="$bin_dir" "$file_path")
+
+ln -vs "$file_rel" "$bin_dir/" || {
+    echo "Failed to link $file_path to $bin_dir/."
+    exit 1
+}
+
+if [ "$make_executable" = true ] && [ ! -x "$file_path" ]; then
+    chmod +x "$file_path" || {
+        echo "Failed to make $file_path executable."
+        exit 1
+    }
+fi
+
+# Check if the link is functional.
+
+if [ -e "$bin_dir/$file_rel" ]; then
+    echo "Linked $file_path to $bin_dir/."
+else
+    echo "Failed to link $file_path to $bin_dir/."
+    exit 1
+fi
+
+if [ ! -x "$file_path" ]; then
+    echo "The linked file is not executable."
+    exit 1
+fi
