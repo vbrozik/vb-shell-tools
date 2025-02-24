@@ -1,0 +1,85 @@
+#!/bin/sh
+
+# Diagnose connectivity to a given URL.
+# The script shows the request method and Host headers
+# and the response status.
+
+# On Check Point Gaia, the script uses the HTTP proxy settings
+# from the Gaia configuration.
+
+# similar alternative: wget --spider "$url"
+
+if [ $# -ne 1 ] ; then
+    echo "Usage: $0 <URL>"
+    exit 1
+fi
+
+url=$1
+
+curl_cert_option="--insecure"
+## The following options are probably only for Check Point services.
+## TODO: Investigate find / -iname '*ca-bundle*.crt'
+# curl_cert_option="--cacert $CPDIR/conf/ca-bundle.crt"
+# curl_cert_option="--cacert $CPDIR/conf/ca-bundle-public-cloud.crt"
+
+# Get the name of the curl command.
+get_curl_name () {
+    for name in curl curl_cli ; do
+        if command -v "$name" > /dev/null ; then
+            printf "%s" "$name"
+            return
+        fi
+    done
+}
+
+# Get the HTTP proxy address from Check Point Gaia settings.
+get_gaia_http_proxy_address () {
+    # The first option is officially supported by Check Point.
+    # The second option is able to return error status if the command fails.
+
+    # clish -c 'show proxy address' | sed -En 's/^address\s+(.*)/\1/p'
+    dbget proxy:ip-address 2> /dev/null
+}
+
+# Get the HTTP proxy port from Check Point Gaia settings.
+get_gaia_http_proxy_port () {
+    # clish -c 'show proxy port' | sed -En 's/^port\s+(.*)/\1/p'
+    dbget proxy:port 2> /dev/null
+}
+
+# Get the HTTP proxy address and port from the system.
+get_http_proxy () {
+    # For now we only examine the Check Point Gaia configuration.
+    proxy_address=$(get_gaia_http_proxy_address)
+    proxy_port=$(get_gaia_http_proxy_port)
+    if [ -n "$proxy_address" ] && [ -n "$proxy_port" ] ; then
+        gaia_http_proxy="http://$proxy_address:$proxy_port"
+        printf "Using proxy from Gaia configuration: %s\n\n" \
+            "$gaia_http_proxy" >&2
+        printf "%s" "$gaia_http_proxy"
+    fi
+}
+
+curl=$(get_curl_name)
+if [ -z "$curl" ] ; then
+    echo "The tool curl was not found." >&2
+    exit 1
+fi
+
+if [ -z "$all_proxy$ALL_PROXY" ] ; then
+    http_proxy_settings=$(get_http_proxy)
+    [ -n "$http_proxy_settings" ] && export ALL_PROXY="$http_proxy_settings"
+fi
+
+"$curl" -vfLI $curl_cert_option "$url" 2>&1 |
+    grep -E '^([<>]|\* .+URL returned) ' |
+    sed -En '
+        2,$ s/^> HEAD/\n&/p
+        /^(> HEAD |> Host: |< HTTP\/|\* )/ p
+        '
+
+## TODO:
+## - curl 7.61.1-DEV (in Gaia R81.20) does not show request headers
+## - URLs to check:
+##   - https://updates.checkpoint.com/
+##   - https://dl3.checkpoint.com/
