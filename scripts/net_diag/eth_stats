@@ -1,0 +1,108 @@
+#!/bin/sh
+
+# eth_stats
+
+# This script captures a number of frames from a network interface and
+# analyzes the ethernet addresses to determine the number of broadcast,
+# multicast, and unicast frames. It then prints the counts and percentages
+# of each type of frame.
+
+# Examples of usage:
+
+# eth_stats eth0
+
+# On Check Point Maestro SGM - sync communication:
+# eth_stats Sync
+
+# The same directly on the downlink from the MHO (for SG 1):
+# eth_stats BPEth0 vlan 3801
+
+# -------------- parameters --------------
+
+# number of frames to capture to analyze
+frames=1000
+# snap length just for ethernet MAC addresses, 2 level Q-in-Q, type
+snap_len=$((6 + 6 + 4 + 4 + 2))
+# snap length just for ethernet destination address
+# snap_len=6
+prog_name=eth_stats
+
+help () {
+    echo "Usage: $0 [options] <interface> [tcpdump options]"
+    echo "Options:"
+    echo "  -c <frames>  number of frames to capture (default: $frames)"
+    echo "  -s <snap_len>  snap length for tcpdump (default: $snap_len)"
+    echo "  -h  display this help"
+}
+
+# parse command line using getopts
+while getopts "hc:s:" opt; do
+    case $opt in
+        c)
+            frames=$OPTARG
+            ;;
+        s)
+            snap_len=$OPTARG
+            ;;
+        h)
+            help
+            exit 0
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            help
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+interface=$1
+shift
+
+if [ -z "$interface" ]; then
+    echo "Error: missing interface" >&2
+    help
+    exit 1
+fi
+
+tcpdump_count () {
+    file=$1
+    shift
+    tcpdump -nnq -r "$file" "$@" 2>/dev/null | wc -l
+}
+
+percentage () {
+    part=$1
+    total=$2
+    echo "scale=2; 100 * $part / $total" | bc
+}
+
+print_stats () {
+    message=$1:
+    total_frames=$2
+    if [ $# -le 2 ] ; then
+        printf "%12s %6d\n" "$message" "$total_frames"
+    else
+        specific_frames=$3
+        printf "%12s %6d  %6.1f%%\n" "$message" "$specific_frames" "$(percentage "$specific_frames" "$total_frames")"
+    fi
+}
+
+tmp_file=$(mktemp /tmp/"$prog_name".XXXXXX.pcap) ||
+    { echo "Error creating temp file, exiting." >&2 ; exit 1 ; }
+trap 'rm -f "$tmp_file"' EXIT
+
+tcpdump -i "$interface" -w "$tmp_file" -c "$frames" -s "$snap_len" -q "$@" 2>/dev/null ||
+    { echo "Error running tcpdump, exiting." >&2 ; exit 1 ; }
+
+total_frames=$(tcpdump_count "$tmp_file")
+broadcast_frames=$(tcpdump_count "$tmp_file" ether broadcast)
+# Note: The filter "ether multicast" includes also broadcast frames
+multicast_frames=$(tcpdump_count "$tmp_file" ether multicast and not ether broadcast)
+unicast_frames=$(tcpdump_count "$tmp_file" not ether multicast and not ether broadcast)
+
+print_stats "Total" "$total_frames"
+print_stats "Broadcast" "$total_frames" "$broadcast_frames"
+print_stats "Multicast" "$total_frames" "$multicast_frames"
+print_stats "Unicast" "$total_frames" "$unicast_frames"
