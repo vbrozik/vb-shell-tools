@@ -41,3 +41,11 @@ Example of VS Code `launch.json` profile to be added:
 
 This section contains various tools. They are not included in the default
 installation.
+
+## Scripts in other repositories
+
+Some of my other repositories contain shell scripts usable in generic systems. They might be moved here in the future.
+
+- [cp-sh-tools](https://github/com/vbrozik/cp-sh-tools) - shell tools for Check Point Gaia
+  - [bgjob](https://github.com/vbrozik/cp-sh-tools/blob/main/generic/bgjob) - run background job easily without `screen` or `tmux`
+  - [watch_diff](https://github.com/vbrozik/cp-sh-tools/blob/main/generic/watch_diff) - watch for changes in repeated runs of a command and log them
