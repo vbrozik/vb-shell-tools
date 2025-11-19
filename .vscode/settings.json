@@ -1,7 +1,10 @@
 {
     "cSpell.words": [
         "bgjob",
+        "cpopenssl",
         "dbget",
-        "debugpyw"
+        "debugpyw",
+        "pycache",
+        "stty"
     ]
 }
