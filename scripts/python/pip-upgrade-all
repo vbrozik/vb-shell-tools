@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Upgrade all packeges using pip while trying to avoid breaking the dependencies.
+# Upgrade all packages using pip while trying to avoid breaking the dependencies.
 
 pip list --format json |
     jq -r '.[].name' |
