@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# deinterlace_text
+
+# In the text input if every other line is empty, remove those empty lines.
+
+input_file="$1"
+if [ -z "$input_file" ] ; then
+    input_file="-"
+fi
+
+temp_file=$(mktemp)
+
+cleanup () {
+    rm -f "$temp_file"
+}
+trap cleanup EXIT
+
+old_umask=$(umask)
+umask 077
+cat -- "$input_file" > "$temp_file"
+umask "$old_umask"
+
+total_lines=$(wc -l < "$temp_file")
+
+if [ "$total_lines" -lt 2 ] ; then
+    cat "$temp_file"
+elif awk 'NR % 2 == 0 { if ($0 != "") { exit 1 } }' "$temp_file" ; then
+    awk 'NR % 2 == 1' "$temp_file"
+elif awk 'NR % 2 == 1 { if ($0 != "") { exit 1 } }' "$temp_file" ; then
+    awk 'NR % 2 == 0' "$temp_file"
+else
+    cat "$temp_file"
+fi
