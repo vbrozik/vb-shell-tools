@@ -6,6 +6,10 @@
 
 cert_install_dir="/usr/local/share/ca-certificates"
 
+# By default use the legacy Windows PowerShell which is available on all Windows systems.
+powershell=powershell.exe
+# powershell=pwsh.exe   # Uncomment this line to use PowerShell Core if installed.
+
 script_name=$(basename "$0")
 
 show_help() {
@@ -25,15 +29,15 @@ show_help() {
 }
 
 
-list_mode=0
-install_mode=0
-list_pattern=""
-install_thumbprints=""
-
 if [ $# -eq 0 ] ; then
     show_help
     exit 1
 fi
+
+list_mode=0
+install_mode=0
+list_pattern=""
+install_thumbprints=""
 
 while [ $# -gt 0 ] ; do
     case "$1" in
@@ -67,13 +71,19 @@ if [ "$list_mode" -eq 1 ] && [ "$install_mode" -eq 1 ] ; then
     exit 1
 fi
 
+# Execute a PowerShell command.
+# 1: command string
+powershell_command() {
+    "$powershell" -Command "$1"
+}
+
 # List Windows certificates.
 list_windows_certs() {
-    powershell.exe -Command "
-    Get-ChildItem -Path Cert:\LocalMachine\Root | 
-    Where-Object { \$_.Subject -like '$list_pattern' } | 
-    Select-Object Thumbprint, Subject | 
-    Format-Table -AutoSize
+    powershell_command "
+    Get-ChildItem -Path Cert:\LocalMachine\Root |
+        Where-Object { \$_.Subject -like '$list_pattern' } |
+        Select-Object Thumbprint, Subject |
+        Format-Table -AutoSize
     "
 }
 
@@ -83,9 +93,9 @@ install_windows_certs() {
     IFS=',' read -r -a thumbprint_array <<< "$install_thumbprints"
     for thumbprint in "${thumbprint_array[@]}" ; do
         cert_path=$(
-            powershell.exe -Command "
+            powershell_command "
             \$cert = Get-ChildItem -Path Cert:\LocalMachine\Root | 
-            Where-Object { \$_.Thumbprint -eq '$thumbprint' }
+                Where-Object { \$_.Thumbprint -eq '$thumbprint' }
             if (\$cert) {
                 \$tempPath = [System.IO.Path]::GetTempFileName()
                 Export-Certificate -Cert \$cert -FilePath \$tempPath -Force | Out-Null
@@ -101,7 +111,7 @@ install_windows_certs() {
                     -inform DER -in "$(wslpath "$cert_path")" \
                     -out "$cert_install_dir/$thumbprint.crt" -outform PEM &&
                 copied_certs=$((copied_certs + 1))
-            powershell.exe -Command "Remove-Item '$cert_path' -Force"
+            powershell_command "Remove-Item '$cert_path' -Force"
             printf "Installed certificate with thumbprint: %s\n" "$thumbprint"
         else
             printf "Certificate with thumbprint %s not found.\n" "$thumbprint" >&2
