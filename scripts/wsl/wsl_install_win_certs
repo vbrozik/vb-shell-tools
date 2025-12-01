@@ -6,16 +6,22 @@
 
 cert_install_dir="/usr/local/share/ca-certificates"
 
+script_name=$(basename "$0")
 
 show_help() {
     printf "wsl_install_win_certs - Install Windows trusted root certificates into WSL.\n\n"
-    printf "Usage: %s [options]\n" "$(basename "$0")"
-    printf "\nOptions:\n"
-    printf "  -h, --help                 Show this help message and exit\n"
-    printf "  -l, --list pattern         List Windows certificates matching pattern\n"
-    printf "  -i, --install thumbprints  Install Windows certificates matching thumbprints\n"
-    printf "\n"
-    printf "Thumbprints is a comma-separated list without spaces.\n"
+    printf "Usage: %s [options]\n" "$script_name"
+    echo
+    printf "Options:\n"
+    printf "  -h, --help                 Show this help message and exit.\n"
+    printf "  -l, --list pattern         List Windows certificates matching pattern.\n"
+    printf "  -i, --install thumbprints  Install Windows certificates matching thumbprints,\n"
+    printf "                             comma-separated list without spaces.\n"
+    echo
+    printf "Example of listing Zscaler certificates and installing by their thumbprints:\n"
+    echo
+    printf "%s --list '*zscaler*'\n" "$script_name"
+    printf "%s --install ABC123...,DEF456...\n" "$script_name"
 }
 
 
