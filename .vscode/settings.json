@@ -5,6 +5,7 @@
         "dbget",
         "debugpyw",
         "pycache",
-        "stty"
+        "stty",
+        "wslpath"
     ]
 }
