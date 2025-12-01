@@ -1,0 +1,120 @@
+#!/bin/bash
+
+# wsl_install_win_certs
+
+# Install selected trusted Windows certificates into WSL Ubuntu.
+
+cert_install_dir="/usr/local/share/ca-certificates"
+
+
+show_help() {
+    printf "wsl_install_win_certs - Install Windows trusted root certificates into WSL.\n\n"
+    printf "Usage: %s [options]\n" "$(basename "$0")"
+    printf "\nOptions:\n"
+    printf "  -h, --help                 Show this help message and exit\n"
+    printf "  -l, --list pattern         List Windows certificates matching pattern\n"
+    printf "  -i, --install thumbprints  Install Windows certificates matching thumbprints\n"
+    printf "\n"
+    printf "Thumbprints is a comma-separated list without spaces.\n"
+}
+
+
+list_mode=0
+install_mode=0
+list_pattern=""
+install_thumbprints=""
+
+if [ $# -eq 0 ] ; then
+    show_help
+    exit 1
+fi
+
+while [ $# -gt 0 ] ; do
+    case "$1" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -l|--list)
+            list_mode=1
+            list_pattern="$2"
+            shift 2
+            if [ -z "$list_pattern" ] ; then
+                list_pattern="*"
+            fi
+            ;;
+        -i|--install)
+            install_mode=1
+            install_thumbprints="$2"
+            shift 2
+            ;;
+        *)
+            printf "Unknown option: %s\n" "$1" >&2
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$list_mode" -eq 1 ] && [ "$install_mode" -eq 1 ] ; then
+    printf "Cannot use --list and --install together.\n" >&2
+    exit 1
+fi
+
+# List Windows certificates.
+list_windows_certs() {
+    powershell.exe -Command "
+    Get-ChildItem -Path Cert:\LocalMachine\Root | 
+    Where-Object { \$_.Subject -like '$list_pattern' } | 
+    Select-Object Thumbprint, Subject | 
+    Format-Table -AutoSize
+    "
+}
+
+# Install Windows certificates into WSL.
+install_windows_certs() {
+    copied_certs=0
+    IFS=',' read -r -a thumbprint_array <<< "$install_thumbprints"
+    for thumbprint in "${thumbprint_array[@]}" ; do
+        cert_path=$(
+            powershell.exe -Command "
+            \$cert = Get-ChildItem -Path Cert:\LocalMachine\Root | 
+            Where-Object { \$_.Thumbprint -eq '$thumbprint' }
+            if (\$cert) {
+                \$tempPath = [System.IO.Path]::GetTempFileName()
+                Export-Certificate -Cert \$cert -FilePath \$tempPath -Force | Out-Null
+                Write-Output \$tempPath
+            } else {
+                Write-Output ''
+            }
+        ")
+        cert_path=$(echo "$cert_path" | tr -d '\r')
+        if [ -n "$cert_path" ] ; then
+            printf "Installing certificate %s...\n" "$cert_path"
+            sudo openssl x509 \
+                    -inform DER -in "$(wslpath "$cert_path")" \
+                    -out "$cert_install_dir/$thumbprint.crt" -outform PEM &&
+                copied_certs=$((copied_certs + 1))
+            powershell.exe -Command "Remove-Item '$cert_path' -Force"
+            printf "Installed certificate with thumbprint: %s\n" "$thumbprint"
+        else
+            printf "Certificate with thumbprint %s not found.\n" "$thumbprint" >&2
+        fi
+    done
+    if [ "$copied_certs" -gt 0 ] ; then
+        printf "Updating CA certificates...\n"
+        sudo update-ca-certificates
+        printf "Updated CA certificates. Total installed: %d\n" "$copied_certs"
+    else
+        printf "No certificates were installed.\n"
+    fi
+}
+
+if [ "$list_mode" -eq 1 ] ; then
+    list_windows_certs
+elif [ "$install_mode" -eq 1 ] ; then
+    install_windows_certs
+else
+    printf "No operation specified. Use --list or --install.\n" >&2
+    exit 1
+fi
