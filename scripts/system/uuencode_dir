@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# uuencode_dir
+
+# Create a compressed tar archive of the current directory, encode it in base64.
+# The archive can be extracted using `base64 -d | tar -xJf -`
+
+# The aim is to be able to move the directory content over clipboard.
+
+
+dir_base=$(basename "$(pwd)")
+
+exclude_list=$(cat <<+++EOF+++
+__pycache__
+*.egg-info
+$dir_base/.git
+$dir_base/.vscode
+$dir_base/.github
+$dir_base/.venv
+$dir_base/.pytest_cache
+$dir_base/build
+$dir_base/tmp
++++EOF+++
+)
+
+# Show usage information
+usage() {
+    echo "Create a tar archive and encode it in base64."
+    echo "Extract the content using 'base64 -d | tar -xJf -'."
+    echo
+    echo "Usage: $0 [-t] [-c] [-h]"
+    echo "  -t  Test mode: create a tar and list its contents"
+    echo "  -c  Clipboard mode: put the encoded tar in the clipboard (WSL or Windows only)"
+    echo "  -h  Show this help message"
+}
+
+while getopts "thc" opt ; do
+    case $opt in
+        t)
+            # test mode: create a tar and immediately list its contents
+            test_mode=1
+            ;;
+        c)
+            # clipboard mode: create a tar and copy it to the clipboard
+            clipboard_mode=1
+            ;;
+        h)
+            # help mode: show usage information
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: -$opt" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+postprocess () {
+    if [ "$test_mode" = 1 ] ; then
+        base64 -d | tar -tJf -
+    else
+        if [ "$clipboard_mode" = 1 ] && grep -qi 'wsl2' /proc/version >/dev/null 2>&1 ; then
+            clip.exe
+        else
+            cat
+        fi
+    fi
+}
+
+
+cd .. || {
+    echo "Failed to change directory to parent." >&2
+    exit 1
+}
+
+tar -cJf - --exclude-vcs-ignores --exclude-from <(printf "%s\n" "$exclude_list") "$dir_base" |
+    base64 |
+    postprocess
