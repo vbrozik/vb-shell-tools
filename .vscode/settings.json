@@ -4,8 +4,10 @@
         "cpopenssl",
         "dbget",
         "debugpyw",
+        "ghcs",
         "pycache",
         "stty",
+        "tmpredir",
         "wslpath"
     ]
 }

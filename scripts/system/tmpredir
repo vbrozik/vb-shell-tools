@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# tmpredir
+
+# A script implementing similar functionality as the zsh =(command) operator.
+# Instead of the <(command) operator this function creates a temporary file
+# containing the output of the command and supplies the path to the main command
+# as an argument. The temporary file is deleted after the main command exits.
+
+# TODO:
+# * Support way of escaping % characters in the main command arguments
+#   probably by doubling them (%%).
+# * Support reading input from stdin when no input files or - are given.
+# * Support reading the input files in parallel to speed up things.
+# * If no placeholders are used in the main command, append all temp file paths
+#   as arguments to the main command.
+# * If no -- is given, assume all pipe-files and - are inputs and the first executable
+#   non-pipe file argument is the main command.
+
+set -euo pipefail
+
+# Array to store temporary file paths
+declare -a temp_files=()
+
+# Cleanup function to remove all temporary files
+cleanup() {
+    for temp_file in "${temp_files[@]}"; do
+        if [[ -f "$temp_file" ]]; then
+            rm -f "$temp_file"
+        fi
+    done
+}
+
+# Register cleanup trap
+trap cleanup EXIT
+
+# Display usage information
+usage() {
+    cat <<EOF
+Usage: ${0##*/} [OPTIONS] [input_file1 input_file2 ...] -- main_command [args...]
+
+Emulates zsh's =(command) process substitution by capturing command outputs
+into temporary files, passing their paths to a main command, and cleaning up.
+
+Arguments:
+    input_fileX     Input files or process substitutions <(command)
+    --              Separator between inputs and main command
+    main_command    Command to execute with substituted file paths
+    args            Arguments to main command; use %1, %2, etc. as placeholders
+                    for the corresponding input file paths
+
+Options:
+    -h, --help      Show this help message and exit
+
+Examples:
+    # Compare output of two commands using diff
+    ${0##*/} <(ls /dir1) <(ls /dir2) -- diff %1 %2
+
+    # Inspect file type of command output
+    ${0##*/} <(echo "hello") -- file %1
+
+    # Multiple uses of same temp file
+    ${0##*/} <(date) -- sh -c 'cat %1; wc -c %1'
+EOF
+}
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Error: Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+# Collect input files until we hit --
+declare -a input_files=()
+while [[ $# -gt 0 && "$1" != "--" ]]; do
+    input_files+=("$1")
+    shift
+done
+
+# Skip the -- separator
+if [[ $# -gt 0 && "$1" == "--" ]]; then
+    shift
+fi
+
+# Remaining arguments are the main command
+if [[ $# -eq 0 ]]; then
+    echo "Error: No main command specified after --" >&2
+    usage >&2
+    exit 1
+fi
+
+declare -a main_command=("$@")
+
+# Validate that we have input files if placeholders are used
+if [[ ${#input_files[@]} -eq 0 ]]; then
+    # Check if any placeholders are used in the command
+    for arg in "${main_command[@]}"; do
+        if [[ "$arg" =~ %[0-9]+ ]]; then
+            echo "Error: Placeholder found but no input files provided" >&2
+            exit 1
+        fi
+    done
+fi
+
+# Create temporary files from inputs
+for i in "${!input_files[@]}"; do
+    input="${input_files[$i]}"
+    temp_file=$(mktemp /tmp/tmpredir.XXXXXX)
+    temp_files+=("$temp_file")
+
+    # Copy input content to temp file
+    if ! cat "$input" > "$temp_file"; then
+        echo "Error: Failed to read input $((i + 1))" >&2
+        exit 1
+    fi
+done
+
+# Substitute placeholders in main command arguments
+declare -a substituted_command=()
+for arg in "${main_command[@]}"; do
+    substituted_arg="$arg"
+    for i in "${!temp_files[@]}"; do
+        placeholder="%$((i + 1))"
+        substituted_arg="${substituted_arg//$placeholder/${temp_files[$i]}}"
+    done
+    substituted_command+=("$substituted_arg")
+done
+
+# Execute the main command
+# Note: We cannot use 'exec' here because it replaces the shell process,
+# which would prevent the EXIT trap from firing and cleaning up temp files.
+"${substituted_command[@]}"
