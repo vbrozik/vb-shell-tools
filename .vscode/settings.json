@@ -5,6 +5,7 @@
         "dbget",
         "debugpyw",
         "ghcs",
+        "pids",
         "pycache",
         "stty",
         "tmpredir",
