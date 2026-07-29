@@ -1,10 +1,22 @@
 #!/bin/sh
 
 # Link the file to the bin directory.
+# The script is useful for making scripts executable from the command line
+# even if they are being developed in a different directory.
+
+# TODO:
+# - Add an option to make the linked file non-executable.
+# - Add an option to select the bin directory.
+# - Check if a functional link already exists.
+# - Add an option to remove the link.
+# - Add an option to check the health of the links in the bin directory.
+
 
 if [ $# -ne 1 ]; then
-    echo "Usage: ln_bin <file_path>"
-    exit 1
+    # shellcheck disable=SC2016     # We do not want to expand $PATH
+    echo 'Link the file to the bin directory in $PATH.'
+    echo 'Usage: ln_bin <executable_file_path>'
+    info_mode=1
 fi
 
 file_path=$1
@@ -24,21 +36,27 @@ bin_dir=$(
     )
 
 if [ -z "$bin_dir" ]; then
-    echo "No bin directory found in \$PATH under $HOME."
+    echo "No bin directory found in \$PATH under $HOME." >&2
     exit 1
+fi
+
+if [ "$info_mode" = 1 ] ; then
+    echo
+    echo "In this environment the links will be created in $bin_dir"
+    exit
 fi
 
 # Get file_path relative to $bin_dir.
 file_rel=$(realpath --relative-to="$bin_dir" "$file_path")
 
 ln -vs "$file_rel" "$bin_dir/" || {
-    echo "Failed to link $file_path to $bin_dir/."
+    echo "Failed to link $file_path to $bin_dir/." >&2
     exit 1
 }
 
 if [ "$make_executable" = true ] && [ ! -x "$file_path" ]; then
     chmod +x "$file_path" || {
-        echo "Failed to make $file_path executable."
+        echo "Failed to make $file_path executable." >&2
         exit 1
     }
 fi
@@ -48,11 +66,11 @@ fi
 if [ -e "$bin_dir/$file_rel" ]; then
     echo "Linked $file_path to $bin_dir/."
 else
-    echo "Failed to link $file_path to $bin_dir/."
+    echo "Failed to link $file_path to $bin_dir/." >&2
     exit 1
 fi
 
 if [ ! -x "$file_path" ]; then
-    echo "The linked file is not executable."
+    echo "Warning: The linked file is not executable." >&2
     exit 1
 fi
