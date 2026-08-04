@@ -8,6 +8,8 @@
         "pids",
         "pycache",
         "stty",
+        "textpack",
+        "textunpack",
         "tmpredir",
         "wslpath"
     ]
