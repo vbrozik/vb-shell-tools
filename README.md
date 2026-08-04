@@ -2,22 +2,36 @@
 
 Repository various simple shell tools for common use: backups etc.
 
+## Installation
+
+### Quick install
+
+A simple single script can be installed the following way:
+
+FIXME
+
+### Full installation
+
+The procedure is not fully implemented yet.
+
 Install the tools by running `./setup.sh`. NOTE: Currently only scripts
 are installed.
 
-## backup
+## Usage of individual tools
+
+### backup
 
 Create a backup of specified files and directories to tar archive
 in specified directories. The tool keeps defined number of backups
 (3 by default) and deletes the oldest ones.
 
-## functions and aliases
+### functions and aliases
 
-### wsl-tools
+#### wsl-tools
 
 - `cdw` --- change directory to Windows path
 
-### python-tools
+#### python-tools
 
 - `debugpyw` --- run Python debugpy in wait mode (for debugging in VS Code)
   - supports: executable file path, `-m` *`module`*, executable in `$PATH`
@@ -37,7 +51,7 @@ Example of VS Code `launch.json` profile to be added:
         }
 ```
 
-### various
+#### various
 
 This section contains various tools. They are not included in the default
 installation.
