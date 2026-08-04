@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# textunpack (companion to textpack)
+
+base64 -d | tar -xJf -

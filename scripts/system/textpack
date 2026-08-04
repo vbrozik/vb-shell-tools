@@ -1,14 +1,11 @@
 #!/bin/bash
 
-# uuencode_dir
+# textpack
 
 # Create a compressed tar archive of the current directory, encode it to text.
 # The archive can be extracted using `base64 -d | tar -xJf -`
 
 # The aim is to be able to move the directory content over clipboard.
-
-# TODO:
-# - Rename the script. Candidates: textpack
 
 
 dir_base=$(basename "$(pwd)")
