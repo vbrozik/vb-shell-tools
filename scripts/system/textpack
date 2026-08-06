@@ -2,13 +2,15 @@
 
 # textpack
 
-# Create a compressed tar archive of the current directory, encode it to text.
+# Create a compressed tar archive of the current directory, given file or directory
+# and encode it to text.
 # The archive can be extracted using `base64 -d | tar -xJf -`
 
-# The aim is to be able to move the directory content over clipboard.
+# The aim is to be able to move the directory content over text-only channels.
 
+# TODO:
+# - Allow to specify multiple targets (files or directories) to pack.
 
-dir_base=$(basename "$(pwd)")
 
 # --- The compression options for tar:
 # Higher xz compression:
@@ -26,19 +28,34 @@ extract_comment="Press Ctrl+d at the end."
 
 # Show usage information
 usage() {
-    echo "Create a tar archive and encode it in base64."
-    echo "Extract the content using '$extract_command'"
-    echo
-    echo "Usage: $0 [-t] [-c] [-e] [-h] [dir_base]"
-    echo
-    echo "  dir_base  The base name of the directory to archive (default: current directory)"
-    echo "  -t  Test mode: create a tar and list its contents"
-    echo "  -c  Clipboard mode: put the encoded tar in the clipboard (WSL or Windows only)"
-    echo "  -e  Include extract command in the output (for copy-paste convenience)"
-    echo "  -h  Show this help message"
+    cat <<EOF
+Create a compressed tar archive of the current directory, given file or directory
+and encode it to text. The archive can be extracted using '$extract_command'
+The aim is to be able to copy the arbitrary content over text clipboard, terminals
+and other text-only channels.
+
+Usage: $(basename "$0") [-tceLh] [-x exclude_list_name] [target]
+
+target: the file or directory to pack (default: \$(pwd))
+    The target name will be included in the archive, so it will be created when
+    extracting. To pack just the current directory content, use '.' as the target.
+
+Options:
+  -t  Test mode: create the tar and immediately list its contents
+  -c  Clipboard mode: put the encoded tar in the clipboard (WSL or Windows only)
+  -e  Include extract command in the output (for copy-paste convenience)
+  -L  Follow symlinks: include the content of the linked files instead of the links themselves
+  -x  Exclude list(s): specify one or more exclude list names (default is built-in 'default' list)
+      The exclude list(s) can be defined in files named .textpack_exclude_<name>
+      Use 'none' to disable the default exclude list.
+  -h  Show this help message
+EOF
 }
 
-while getopts "thce" opt ; do
+
+exclude_list_names=()
+
+while getopts "thceLx:" opt ; do
     case $opt in
         t)
             # test mode: create a tar and immediately list its contents
@@ -51,6 +68,14 @@ while getopts "thce" opt ; do
         e)
             # include extract command in the output
             include_extract_command=1
+            ;;
+        L)
+            # follow symlinks
+            follow_symlinks=1
+            ;;
+        x)
+            # exclude list(s)
+            exclude_list_names+=("$OPTARG")
             ;;
         h)
             # help mode: show usage information
@@ -66,27 +91,50 @@ while getopts "thce" opt ; do
 done
 shift $((OPTIND - 1))
 
-explicit_dir_base=
 if [ "$#" -eq 1 ] ; then
-    dir_base="$1"
-    explicit_dir_base=1
-elif [ "$#" -gt 1 ] ; then
+    target="$1"
+elif [ "$#" -eq 0 ] ; then
+    target="$(pwd)"
+else
     echo "See $0 -h for usage. Unexpected number of arguments: $#" >&2
-    exit 1  
+    exit 1
 fi
 
-exclude_list=$(cat <<+++EOF+++
+target_base=$(basename "$target")
+dir_base=$(dirname "$target")
+
+if [ ${#exclude_list_names[@]} -eq 0 ] ; then
+    exclude_list_names+=("default")
+elif [ "${exclude_list_names[0]}" = "none" ] ; then
+    exclude_list_names=()
+fi
+
+exclude_list=
+for exclude_list_name in "${exclude_list_names[@]}" ; do
+    if [ "$exclude_list_name" = "default" ] ; then
+        exclude_list=$(cat <<EOF
 __pycache__
 *.egg-info
-$dir_base/.git
-$dir_base/.vscode
-$dir_base/.github
-$dir_base/.venv
-$dir_base/.pytest_cache
-$dir_base/build
-$dir_base/tmp
-+++EOF+++
+$target_base/.git
+$target_base/.vscode
+$target_base/.github
+$target_base/.venv
+$target_base/.pytest_cache
+$target_base/build
+$target_base/tmp
+EOF
 )
+    else
+        # TODO Define directory/directories for exclude list files.
+        exclude_list_file="$dir_base/.textpack_exclude_$exclude_list_name"
+        if [ -f "$exclude_list_file" ] && [ -r "$exclude_list_file" ] ; then
+            exclude_list+=$(sed 's/^{{{}}}/'"$target_base"/ "$exclude_list_file")
+            exclude_list+=$'\n'
+        else
+            echo "Exclude list file $exclude_list_file not found or not readable." >&2
+        fi
+    fi
+done
 
 
 encode () {
@@ -121,23 +169,27 @@ postprocess () {
 }
 
 
-if [ "$explicit_dir_base" = 1 ] ; then
-    if [ ! -d "$dir_base" ] ; then
-        echo "Directory $dir_base does not exist." >&2
-        exit 1
-    fi
-else
-    cd .. || {
-        echo "Failed to change directory to parent." >&2
-        exit 1
-    }
+if [ ! -d "$dir_base" ] || [ ! -r "$dir_base" ] ; then
+    echo "Directory $dir_base does not exist or is not readable." >&2
+    exit 1
 fi
+
+cd "$dir_base" || {
+    printf 'Failed to change directory to %s.\n' "$dir_base" >&2
+    exit 1
+}
 
 tmp_len_counter=$(mktemp)
 trap 'rm -f "$tmp_len_counter"' EXIT
 
-tar -c "$compress_option" -f- --exclude-vcs-ignores --exclude-from <(printf "%s\n" "$exclude_list") "$dir_base" |
+tar_options=
+if [ "$follow_symlinks" = 1 ] ; then
+    tar_options='-h'
+fi
+
+tar -c "$compress_option" $tar_options -f- --exclude-vcs-ignores \
+        --exclude-from <(printf "%s\n" "$exclude_list") "$target_base" |
     encode |
     tmp_len_counter="$tmp_len_counter" postprocess
 
-printf '\nLength of the encoded output: %s bytes\n' "$(cat "$tmp_len_counter")"
+printf '\n====== Length of the encoded output: %s bytes ======\n' "$(cat "$tmp_len_counter")" >&2
