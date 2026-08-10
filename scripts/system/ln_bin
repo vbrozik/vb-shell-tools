@@ -5,11 +5,14 @@
 # even if they are being developed in a different directory.
 
 # TODO:
-# - Add an option to make the linked file non-executable.
 # - Add an option to select the bin directory.
 # - Check if a functional link already exists.
 # - Add an option to remove the link.
 # - Add an option to check the health of the links in the bin directory.
+# - Add a possibility to link multiple files at once.
+# - Add an option to update repositories of link targets (e.g. git pull)
+#   and check if the links are still functional.
+# - Add an option to make the linked file non-executable.
 
 
 if [ $# -ne 1 ]; then
@@ -64,7 +67,7 @@ fi
 # Check if the link is functional.
 
 if [ -e "$bin_dir/$file_rel" ]; then
-    echo "Linked $file_path to $bin_dir/."
+    echo "Successfully linked $file_path to $bin_dir/."
 else
     echo "Failed to link $file_path to $bin_dir/." >&2
     exit 1

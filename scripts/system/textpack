@@ -10,6 +10,8 @@
 
 # TODO:
 # - Allow to specify multiple targets (files or directories) to pack.
+# - Add VSC ignores.
+# - Support compression algorithm selection (xz not on Gaia R81.20).
 
 
 # --- The compression options for tar:
@@ -17,11 +19,15 @@
 compress_option='-Ixz -8 -e'
 # Standard xz compression:
 # compress_option='-J'
+# Standard gzip compression:
+# compress_option='-z'
 
 # Decoding from text and extracting the content:
 extract_command="base64 -d | tar -xJf -"
 test_extract_command="base64 -d | tar -tJf -"
-# extract_command="python3 -c 'import base64, sys; sys.stdout.buffer.write(base64.a85decode(sys.stdin.buffer.read()))' | tar -xJf -  # Press Ctrl+d at the end."
+# extract_command="python3 -c 'import base64, sys; sys.stdout.buffer.write(base64.a85decode(sys.stdin.buffer.read()))' | tar -xJf -"
+# extract_command="base64 -d | tar -xzf -"
+# test_extract_command="base64 -d | tar -tzf -"
 
 extract_comment="Press Ctrl+d at the end."
 
@@ -187,7 +193,9 @@ if [ "$follow_symlinks" = 1 ] ; then
     tar_options='-h'
 fi
 
-tar -c "$compress_option" $tar_options -f- --exclude-vcs-ignores \
+# TODO: --exclude-vcs-ignores is not supported on Gaia R81.20
+#   replace it with entries in the exclude list
+tar -c "$compress_option" $tar_options -f- \
         --exclude-from <(printf "%s\n" "$exclude_list") "$target_base" |
     encode |
     tmp_len_counter="$tmp_len_counter" postprocess
