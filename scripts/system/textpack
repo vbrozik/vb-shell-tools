@@ -15,19 +15,35 @@
 
 
 # --- The compression options for tar:
-# Higher xz compression:
-compress_option='-Ixz -8 -e'
-# Standard xz compression:
-# compress_option='-J'
-# Standard gzip compression:
-# compress_option='-z'
 
-# Decoding from text and extracting the content:
-extract_command="base64 -d | tar -xJf -"
-test_extract_command="base64 -d | tar -tJf -"
-# extract_command="python3 -c 'import base64, sys; sys.stdout.buffer.write(base64.a85decode(sys.stdin.buffer.read()))' | tar -xJf -"
-# extract_command="base64 -d | tar -xzf -"
-# test_extract_command="base64 -d | tar -tzf -"
+# - Higher xz compression (should not make a difference for small size archives):
+# compress_option='-Ixz -8 -e'
+# - Standard xz compression (preferred because Gaia R81.20 does not have the xz binary):
+compress_option='-J'
+tar_extract_command="tar -xJf -"
+tar_test_command="tar -tJf -"
+
+# - Standard gzip compression:
+# compress_option='-z'
+# tar_extract_command="tar -xzf -"
+# tar_test_command="tar -tzf -"
+
+# --- Decoding from text options:
+
+# - base64:
+decode_command="base64 -d"
+encode () { base64 ; }
+
+# - base85 (problematic in keyboard typing emulation transfers):
+# decode_command="python3 -c 'import base64, sys; sys.stdout.buffer.write(base64.a85decode(sys.stdin.buffer.read()))'"
+# encode () {
+#     python3 -c "import base64, sys; sys.stdout.write(base64.a85encode(sys.stdin.buffer.read()).decode('ascii'))"
+# }
+
+# --- Content extraction:
+
+extract_command="$decode_command | $tar_extract_command"
+test_extract_command="$decode_command | $tar_test_command"
 
 extract_comment="Press Ctrl+d at the end."
 
@@ -143,12 +159,6 @@ EOF
 done
 
 
-encode () {
-    base64
-    # python3 -c "import base64, sys; sys.stdout.write(base64.a85encode(sys.stdin.buffer.read()).decode('ascii'))"
-}
-
-
 postprocess () {
     if [ "$test_mode" = 1 ] ; then
         tee >(wc -c > "$tmp_len_counter") |
@@ -185,13 +195,13 @@ cd "$dir_base" || {
     exit 1
 }
 
-tmp_len_counter=$(mktemp)
-trap 'rm -f "$tmp_len_counter"' EXIT
-
 tar_options=
 if [ "$follow_symlinks" = 1 ] ; then
     tar_options='-h'
 fi
+
+tmp_len_counter=$(mktemp)
+trap 'rm -f "$tmp_len_counter"' EXIT
 
 # TODO: --exclude-vcs-ignores is not supported on Gaia R81.20
 #   replace it with entries in the exclude list
