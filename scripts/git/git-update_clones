@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# git-update_clones
+
+
+show_help () {
+    cat <<EOF
+Usage: $0 [-h|--help] [repository_dir1 repository_dir2 ...]
+
+Description:
+  Update the given local clones of git repositories by performing git pull in each of them.
+  The tool is mainly intended to update local read-only clones of git repositories.
+  The tool does not change the checked-out branch, it just pulls the latest changes.
+
+Arguments:
+  repository_dir1, repository_dir2, ... : Paths to the local git repository directories to update.
+    If no directories are provided, the script will look for git repositories in the current directory.
+
+Options:
+  -h, --help : Show this help message and exit.
+EOF
+}
+
+
+if [ $# -eq 0 ] ; then
+    repositories=(*/.git/)
+    if [ "${repositories[*]}" = "*/.git/" ] && [ ! -d "*/.git/" ] ; then
+        repositories=()
+    fi
+    repositories=("${repositories[@]%/.git/}")
+else
+    case "$1" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            repositories=("${@%/}")
+            ;;
+    esac
+fi
+
+
+if [ ${#repositories[@]} -eq 0 ] ; then
+    echo "No git repositories found in the current directory." >&2
+    exit 1
+fi
+
+
+for dir in "${repositories[@]}" ; do
+
+    if [ ! -r "$dir" ] || [ ! -d "$dir" ] ; then
+        echo "Warning: Directory $dir does not exist or is not readable." >&2
+        continue
+    fi
+    if [ ! -d "$dir/.git/" ] || ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1 ; then
+        echo "Warning: Directory $dir is not a git repository." >&2
+        continue
+    fi
+
+    echo "--- Updating $dir ..."
+    if [ -n "$(git -C "$dir" status --porcelain)" ] ; then
+        echo "Warning: Skipping $dir: local changes detected." >&2
+        continue
+    fi
+    # In the future, we might want to check out the default branch (main or master) explicitly.
+    # git -C "$dir" checkout main 2>/dev/null ||
+    #     git -C "$dir" checkout master 2>/dev/null
+    git -C "$dir" pull --ff-only
+
+done
