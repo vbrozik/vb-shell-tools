@@ -77,6 +77,7 @@ EOF
 
 exclude_list_names=()
 
+# cSpell: disable-next-line
 while getopts "thceLx:" opt ; do
     case $opt in
         t)
